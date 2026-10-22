@@ -27,11 +27,11 @@ survey-system/
 │  ├─ services/           jump（跳转）、validate（校验）、stats（聚合）、survey（结构）
 │  └─ views/              EJS 页面
 ├─ public/                样式与前端脚本（编辑器、填写页）
-├─ scripts/               初始化、演示数据、页面检查、截图、浏览器检查
+├─ scripts/               初始化数据库、演示数据、启动 MongoDB、页面检查
 ├─ tests/                 单元测试 + API 集成测试
-├─ docs/                  数据库设计、API、测试用例、AI 使用日志、截图
-└─ 项目报告.docx
 ```
+
+仓库里只放代码、测试和这份 README；数据库设计、API 说明、测试用例、AI 使用记录和项目报告随作业单独提交。
 
 ## 快速开始
 
@@ -96,18 +96,6 @@ npm test
 | 命令 | 作用 |
 |---|---|
 | `node scripts/check-pages.js` | 登录后逐个请求主要页面，检查状态码 |
-| `node scripts/screenshots.js` | 用 Playwright 打开页面并截图到 `docs/screenshots`（需先启动服务） |
-| `node scripts/ui-check.js` | 浏览器端端到端检查：编辑保存 + 完整填写提交 |
-
-截图和端到端检查需要安装 Playwright 的 Chromium（`npx playwright install chromium`）。
-
-## 文档
-
-- [数据库设计](docs/database-design.md)
-- [API 说明](docs/api.md)
-- [测试用例](docs/test-cases.md)
-- [AI 使用日志](docs/ai-usage-log.md)
-- 项目报告：`项目报告.docx`
 
 ## 设计上的几个约定
 

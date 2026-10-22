@@ -3,3 +3,10 @@ data/
 *.log
 .env
 .DS_Store
+
+# 只保留在本地，随作业单独提交
+docs/
+项目报告.docx
+scripts/build-report.py
+scripts/screenshots.js
+scripts/ui-check.js
