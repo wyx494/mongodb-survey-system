@@ -1,0 +1,123 @@
+# 基于 MongoDB 的在线问卷系统
+
+课程大作业第一阶段。一个简化版的在线问卷系统：注册用户可以创建问卷、通过短链分发、收集答卷，并按题目自动统计结果。
+
+技术栈：Node.js 22 + Express + MongoDB 8（官方 `mongodb` 驱动，不使用 Mongoose）+ EJS。
+
+## 功能
+
+- 账号：注册、登录、退出；密码加盐哈希；登录后只能看到自己的问卷
+- 问卷：创建、编辑题目、发布、关闭、设置截止时间、复制短链
+- 题型：单选、多选（可限制最少/最多/必须选几个）、填空（文本长度）、数字（范围、是否整数）
+- 跳转：按单选/多选/数字的结果跳题，规则存在问卷里，可在编辑页配置
+- 填写：登录后逐题作答、按规则跳转、前后端双重校验、匿名/记名、可限制重复填写
+- 统计：单选计数、多选计数、填空列表、数字平均值/最值，整卷与单题统计
+
+## 目录结构
+
+```
+survey-system/
+├─ server.js              启动入口
+├─ src/
+│  ├─ app.js              Express 应用组装
+│  ├─ config.js           配置（端口、数据库、会话时长）
+│  ├─ db.js               连接、集合校验器、索引
+│  ├─ auth.js             密码哈希、会话、登录中间件
+│  ├─ routes/             auth / surveys / public / stats / pages
+│  ├─ services/           jump（跳转）、validate（校验）、stats（聚合）、survey（结构）
+│  └─ views/              EJS 页面
+├─ public/                样式与前端脚本（编辑器、填写页）
+├─ scripts/               初始化、演示数据、页面检查、截图、浏览器检查
+├─ tests/                 单元测试 + API 集成测试
+├─ docs/                  数据库设计、API、测试用例、AI 使用日志、截图
+└─ 项目报告.docx
+```
+
+## 快速开始
+
+### 0. 准备 MongoDB
+
+本机已安装 MongoDB 8.3，但安装时没有完成初始化（没有注册服务，也没有数据目录）。可以先手动启动：
+
+```bat
+mkdir "%LOCALAPPDATA%\MongoDB\data"
+"C:\Program Files\MongoDB\Server\8.3\bin\mongod.exe" --dbpath "%LOCALAPPDATA%\MongoDB\data" --bind_ip 127.0.0.1 --port 27017
+```
+
+也可以直接运行 `scripts\start-mongo.bat`。
+
+### 1. 安装依赖
+
+```bat
+npm install
+```
+
+### 2. 初始化数据库（建集合、索引、校验器）
+
+```bat
+npm run init-db
+```
+
+### 3.（可选）写入演示数据
+
+```bat
+npm run seed
+```
+
+会创建演示账号 `demo / demo123`、一份已发布的“课程学习体验调查”（含 5 份答卷）和一份草稿问卷。
+
+### 4. 启动
+
+```bat
+npm start
+```
+
+打开 <http://localhost:3000>。
+
+### 5. 跑测试
+
+```bat
+npm test
+```
+
+自动化测试使用独立的数据库（`survey_test_*`），跑完会删掉，不影响演示数据。
+
+## 环境变量
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `PORT` | `3000` | 服务端口 |
+| `MONGODB_URI` | `mongodb://127.0.0.1:27017` | MongoDB 连接串 |
+| `DB_NAME` | `survey_system` | 数据库名 |
+| `SESSION_TTL_DAYS` | `7` | 会话有效期（天） |
+
+## 其他脚本
+
+| 命令 | 作用 |
+|---|---|
+| `node scripts/check-pages.js` | 登录后逐个请求主要页面，检查状态码 |
+| `node scripts/screenshots.js` | 用 Playwright 打开页面并截图到 `docs/screenshots`（需先启动服务） |
+| `node scripts/ui-check.js` | 浏览器端端到端检查：编辑保存 + 完整填写提交 |
+
+截图和端到端检查需要安装 Playwright 的 Chromium（`npx playwright install chromium`）。
+
+## 文档
+
+- [数据库设计](docs/database-design.md)
+- [API 说明](docs/api.md)
+- [测试用例](docs/test-cases.md)
+- [AI 使用日志](docs/ai-usage-log.md)
+- 项目报告：`项目报告.docx`
+
+## 设计上的几个约定
+
+1. **匿名 ≠ 免登录**：按需求，填写者仍然要登录；匿名只是答卷里不保存填写人。
+2. **发布后题目锁定**：避免已收到的答卷和题目对不上；标题、说明、截止时间仍可改。
+3. **跳转只能向后**：发布前会校验目标题存在且排在当前题之后，避免死循环。
+4. **服务端为准**：填写页在前端也会算一遍跳转（为了即时反馈），但提交时服务端会从第一题重新走一遍路径并校验。
+
+## 已知限制
+
+- 界面是课程作业级别的简单页面，没有做响应式的精细打磨。
+- 没有做 CSRF token、限流、验证码。
+- 发布后的问卷不能改题目；如果需求变更，第二阶段再扩展“版本化问卷”。

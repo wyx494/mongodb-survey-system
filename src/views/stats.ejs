@@ -1,0 +1,69 @@
+<%- include('partials/head') %>
+<div class="page-head">
+  <div>
+    <h1><%= survey.title %> · 统计</h1>
+    <p class="muted">
+      共收到 <strong><%= stats.total %></strong> 份答卷
+      · 短链 <code>/survey/<%= survey.slug %></code>
+    </p>
+  </div>
+  <div>
+    <a class="btn" href="/surveys/<%= survey._id %>/edit">编辑</a>
+    <a class="btn" href="/dashboard">返回列表</a>
+  </div>
+</div>
+
+<% if (stats.total === 0) { %>
+  <div class="card empty">
+    <p>还没有人填写。</p>
+    <p class="muted">把短链发给同学，收到答卷后这里会自动出统计。</p>
+  </div>
+<% } %>
+
+<% stats.questions.forEach((question, index) => { %>
+  <div class="card stats-block">
+    <div class="stats-head">
+      <h2>第 <%= index + 1 %> 题：<%= question.title %></h2>
+      <span class="badge"><%= question.type === 'single' ? '单选' : question.type === 'multiple' ? '多选' : question.type === 'text' ? '填空' : '数字' %></span>
+    </div>
+    <p class="muted small">作答人数：<%= question.totalAnswered %></p>
+
+    <% if (question.type === 'single' || question.type === 'multiple') { %>
+      <table class="table">
+        <thead><tr><th>选项</th><th>次数</th><th style="width:50%">占比</th></tr></thead>
+        <tbody>
+          <% const maxCount = Math.max(1, ...question.options.map(o => o.count)); %>
+          <% for (const option of question.options) { %>
+            <tr>
+              <td><%= option.label %> <span class="muted small">(<%= option.key %>)</span></td>
+              <td><%= option.count %></td>
+              <td>
+                <div class="bar"><div class="bar-inner" style="width: <%= Math.round((option.count / maxCount) * 100) %>%"></div></div>
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    <% } else if (question.type === 'text') { %>
+      <% if (question.values.length === 0) { %>
+        <p class="muted">暂无文本答案。</p>
+      <% } else { %>
+        <ul class="answer-list">
+          <% for (const value of question.values) { %>
+            <li><%= value %></li>
+          <% } %>
+        </ul>
+      <% } %>
+    <% } else { %>
+      <div class="number-stats">
+        <div><span class="num"><%= question.avg === null ? '—' : question.avg %></span><span class="muted small">平均值</span></div>
+        <div><span class="num"><%= question.min === null ? '—' : question.min %></span><span class="muted small">最小值</span></div>
+        <div><span class="num"><%= question.max === null ? '—' : question.max %></span><span class="muted small">最大值</span></div>
+      </div>
+      <% if (question.values.length > 0) { %>
+        <p class="muted small">全部数值：<%= question.values.join('、') %></p>
+      <% } %>
+    <% } %>
+  </div>
+<% }) %>
+<%- include('partials/footer') %>

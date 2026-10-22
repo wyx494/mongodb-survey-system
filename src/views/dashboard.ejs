@@ -1,0 +1,93 @@
+<%- include('partials/head') %>
+<div class="page-head">
+  <div>
+    <h1>我的问卷</h1>
+    <p class="muted">这里只显示你自己创建的问卷。</p>
+  </div>
+  <form method="post" action="/surveys/new">
+    <button type="submit" class="btn primary">+ 新建问卷</button>
+  </form>
+</div>
+
+<% if (surveys.length === 0) { %>
+  <div class="card empty">
+    <p>还没有问卷。</p>
+    <p class="muted">点右上角“新建问卷”，先建一份草稿，再去添加题目。</p>
+  </div>
+<% } else { %>
+  <div class="survey-list">
+    <% for (const survey of surveys) { %>
+      <div class="card survey-item" data-id="<%= survey._id %>" data-slug="<%= survey.slug %>" data-status="<%= survey.status %>">
+        <div class="survey-main">
+          <div class="survey-title">
+            <a href="/surveys/<%= survey._id %>/edit"><%= survey.title %></a>
+            <span class="badge badge-<%= survey.status %>">
+              <%= survey.status === 'draft' ? '草稿' : survey.status === 'published' ? '已发布' : '已关闭' %>
+            </span>
+          </div>
+          <div class="muted small">
+            创建于 <%= survey.createdAt.toLocaleString('zh-CN') %>
+            · 收回 <%= survey.responseCount %> 份
+            <% if (survey.deadline) { %>
+              · 截止 <%= survey.deadline.toLocaleString('zh-CN') %>
+            <% } %>
+          </div>
+        </div>
+        <div class="survey-actions">
+          <a class="btn small" href="/surveys/<%= survey._id %>/edit">编辑</a>
+          <a class="btn small" href="/surveys/<%= survey._id %>/stats">统计</a>
+          <% if (survey.status === 'published') { %>
+            <button type="button" class="btn small" data-action="copy">复制链接</button>
+            <button type="button" class="btn small danger" data-action="close">关闭</button>
+          <% } else if (survey.status === 'draft') { %>
+            <button type="button" class="btn small primary" data-action="publish">发布</button>
+          <% } %>
+        </div>
+      </div>
+    <% } %>
+  </div>
+<% } %>
+
+<script>
+  document.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-action]');
+    if (!button) return;
+    const item = button.closest('.survey-item');
+    const id = item.dataset.id;
+    const slug = item.dataset.slug;
+    const action = button.dataset.action;
+
+    if (action === 'copy') {
+      const url = `${location.origin}/survey/${slug}`;
+      await navigator.clipboard.writeText(url);
+      button.textContent = '已复制';
+      setTimeout(() => { button.textContent = '复制链接'; }, 1500);
+      return;
+    }
+
+    if (action === 'publish') {
+      button.disabled = true;
+      const res = await fetch(`/api/surveys/${id}/publish`, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert([data.error, ...(data.details || [])].filter(Boolean).join('\n'));
+        button.disabled = false;
+        return;
+      }
+      location.reload();
+      return;
+    }
+
+    if (action === 'close') {
+      if (!confirm('关闭后填写者将无法提交，确定吗？')) return;
+      const res = await fetch(`/api/surveys/${id}/close`, { method: 'POST' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || '操作失败');
+        return;
+      }
+      location.reload();
+    }
+  });
+</script>
+<%- include('partials/footer') %>

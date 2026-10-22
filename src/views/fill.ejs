@@ -1,0 +1,40 @@
+<%- include('partials/head') %>
+<div class="fill-wrap">
+  <div class="fill-head">
+    <h1><%= survey.title %></h1>
+    <% if (survey.description) { %>
+      <p class="muted"><%= survey.description %></p>
+    <% } %>
+    <p class="muted small">
+      <%= survey.anonymous ? '匿名问卷：答卷中不会记录你的身份' : '记名问卷：答卷会记录填写人' %>
+      <% if (survey.deadline) { %> · 截止 <%= new Date(survey.deadline).toLocaleString('zh-CN') %><% } %>
+    </p>
+  </div>
+
+  <% if (closedReason) { %>
+    <div class="card empty">
+      <h2><%= closedReason %></h2>
+      <p class="muted">这份问卷目前不接受新的答卷。</p>
+    </div>
+  <% } else { %>
+    <div class="progress"><div class="progress-bar" id="progress-bar"></div></div>
+    <p class="muted small" id="progress-text">正在加载题目…</p>
+    <div id="question-area"></div>
+    <p class="form-error" id="fill-error"></p>
+    <div class="fill-actions">
+      <button type="button" class="btn primary" id="next-btn">下一题</button>
+    </div>
+  <% } %>
+</div>
+
+<script>
+  window.__FILL__ = <%- JSON.stringify({
+    slug: survey.slug,
+    title: survey.title,
+    questions: survey.questions,
+    anonymous: survey.anonymous,
+    allowMultiple: survey.allowMultiple,
+  }).replace(/</g, '\\u003c') %>;
+</script>
+<script src="/fill.js"></script>
+<%- include('partials/footer') %>

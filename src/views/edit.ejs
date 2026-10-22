@@ -1,0 +1,49 @@
+<%- include('partials/head') %>
+<div class="page-head">
+  <div>
+    <h1 contenteditable="false">编辑问卷</h1>
+    <p class="muted">发布前可以随便改；发布后题目会锁定，避免已收回的答卷对不上。</p>
+  </div>
+  <a class="btn" href="/dashboard">返回列表</a>
+</div>
+
+<% if (survey.status !== 'draft') { %>
+  <div class="notice">这份问卷已经<%= survey.status === 'published' ? '发布' : '关闭' %>，题目不能再修改。</div>
+<% } %>
+
+<div class="card">
+  <label class="field">问卷标题
+    <input id="meta-title" maxlength="120" value="<%= survey.title %>">
+  </label>
+  <label class="field">问卷说明
+    <textarea id="meta-desc" rows="3" maxlength="2000"><%= survey.description %></textarea>
+  </label>
+  <div class="row">
+    <label class="check"><input type="checkbox" id="meta-anonymous" <%= survey.anonymous ? 'checked' : '' %>> 允许匿名填写</label>
+    <label class="check"><input type="checkbox" id="meta-multiple" <%= survey.allowMultiple ? 'checked' : '' %>> 允许同一个人重复填写</label>
+  </div>
+  <label class="field">截止时间（留空表示不限制）
+    <input type="datetime-local" id="meta-deadline" value="<%= survey.deadline ? new Date(survey.deadline).toISOString().slice(0, 16) : '' %>">
+  </label>
+  <p class="muted small">短链：<code>/survey/<%= survey.slug %></code> · 状态：
+    <span id="status-text"><%= survey.status === 'draft' ? '草稿' : survey.status === 'published' ? '已发布' : '已关闭' %></span>
+  </p>
+</div>
+
+<div id="questions"></div>
+
+<div class="editor-actions">
+  <button type="button" class="btn" id="add-question">+ 添加题目</button>
+  <span class="spacer"></span>
+  <span class="muted" id="save-message"></span>
+  <button type="button" class="btn" id="save">保存</button>
+  <% if (survey.status === 'draft') { %>
+    <button type="button" class="btn primary" id="publish">保存并发布</button>
+  <% } %>
+</div>
+
+<script>
+  window.__SURVEY__ = <%- JSON.stringify(survey).replace(/</g, '\\u003c') %>;
+</script>
+<script src="/edit.js"></script>
+<%- include('partials/footer') %>

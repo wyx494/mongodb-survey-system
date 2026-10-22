@@ -1,0 +1,25 @@
+{
+  "name": "mongodb-survey-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "基于 MongoDB 的在线问卷系统（课程大作业第一阶段）",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "init-db": "node scripts/init-db.js",
+    "seed": "node scripts/seed.js",
+    "test": "node --test --test-concurrency=1 tests/unit.test.js tests/api.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "mongodb": "^6.9.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1"
+  }
+}

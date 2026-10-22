@@ -1,0 +1,44 @@
+<%- include('partials/head') %>
+<div class="card auth-card">
+  <h1>注册</h1>
+  <p class="muted">用户名 3-32 位，可以用中文；密码至少 6 位。</p>
+  <form id="register-form">
+    <label class="field">用户名
+      <input name="username" autocomplete="username" required maxlength="32">
+    </label>
+    <label class="field">密码
+      <input name="password" type="password" autocomplete="new-password" required minlength="6" maxlength="72">
+    </label>
+    <label class="field">再输一次密码
+      <input name="confirm" type="password" autocomplete="new-password" required minlength="6" maxlength="72">
+    </label>
+    <p class="form-error" id="form-error"></p>
+    <button type="submit" class="btn primary">注册并登录</button>
+  </form>
+  <p class="muted">已经有账号？<a href="/login">去登录</a></p>
+</div>
+<script>
+  document.getElementById('register-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.target;
+    const error = document.getElementById('form-error');
+    error.textContent = '';
+    if (form.password.value !== form.confirm.value) {
+      error.textContent = '两次输入的密码不一致';
+      return;
+    }
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: form.username.value, password: form.password.value }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '注册失败');
+      window.location.href = '/dashboard';
+    } catch (err) {
+      error.textContent = err.message;
+    }
+  });
+</script>
+<%- include('partials/footer') %>
