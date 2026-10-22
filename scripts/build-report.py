@@ -214,6 +214,11 @@ p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 p.paragraph_format.space_after = Pt(6)
 set_run(p.add_run("第一阶段报告"), "黑体", 12, False, (0x55, 0x55, 0x55))
 
+p = doc.add_paragraph()
+p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+p.paragraph_format.space_before = Pt(2)
+set_run(p.add_run("代码仓库：https://github.com/wyx494/mongodb-survey-system"), "宋体", 10.5, False, (0x33, 0x33, 0x33))
+
 # ================= 一 =================
 h1("一、需求分析与功能范围")
 
