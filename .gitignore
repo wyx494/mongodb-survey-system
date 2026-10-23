@@ -10,3 +10,8 @@ docs/
 scripts/build-report.py
 scripts/screenshots.js
 scripts/ui-check.js
+
+# 第二阶段报告与生成脚本
+项目报告-第二阶段.docx
+项目报告-第二阶段.pdf
+scripts/build-report-phase2.py

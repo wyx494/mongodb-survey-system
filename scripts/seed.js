@@ -9,6 +9,8 @@ const { connect, ensureSchema, close } = require('../src/db');
 const { hashPassword } = require('../src/auth');
 const { generateSlug } = require('../src/services/survey');
 const { computePath } = require('../src/services/jump');
+const { migrateV2 } = require('../src/services/migrate');
+const { addVersion } = require('../src/services/questions');
 
 const QUESTIONS = [
   {
@@ -195,6 +197,91 @@ async function main() {
       });
     }
     console.log('已写入 5 份演示答卷。');
+  }
+
+  const migrated = await migrateV2(db);
+  console.log(
+    `已迁移到第二阶段结构：问卷 ${migrated.surveyCount} 份，题目 ${migrated.questionCount} 道，答卷 ${migrated.responseCount} 份。`
+  );
+
+  // 第二阶段演示数据：复用题目、创建新版本、共享给另一个用户
+  const mainSurvey = await surveys.findOne({ ownerId: user._id, title: '课程学习体验调查' });
+  if (mainSurvey && mainSurvey.questions.length > 0) {
+    const reused = await surveys.findOne({ ownerId: user._id, title: '课程反馈（复用题目）' });
+    if (!reused) {
+      const now = new Date();
+      const source = mainSurvey.questions[0];
+      const doc = {
+        ownerId: user._id,
+        slug: generateSlug(),
+        title: '课程反馈（复用题目）',
+        description: '这份问卷直接复用了上一份问卷里的题目。',
+        anonymous: false,
+        allowMultiple: true,
+        status: 'published',
+        deadline: null,
+        questions: [{ ...source, qid: 'q1', required: true, jumps: [] }],
+        schemaVersion: 2,
+        createdAt: now,
+        updatedAt: now,
+        publishedAt: now,
+      };
+      const inserted = await surveys.insertOne(doc);
+      await responses.insertOne({
+        surveyId: inserted.insertedId,
+        respondentId: user._id,
+        anonymous: false,
+        answers: [
+          {
+            qid: 'q1',
+            value: 'B',
+            questionId: source.questionId,
+            version: source.version,
+          },
+        ],
+        path: ['q1'],
+        submittedAt: new Date(),
+      });
+      console.log('已创建复用同一道题的演示问卷。');
+    }
+
+    const advice = mainSurvey.questions.find((q) => q.title.includes('建议'));
+    if (advice) {
+      const versionCount = await db
+        .collection('question_versions')
+        .countDocuments({ questionId: advice.questionId });
+      if (versionCount < 2) {
+        const base = await db
+          .collection('question_versions')
+          .findOne({ questionId: advice.questionId, version: advice.version });
+        await addVersion(
+          db,
+          advice.questionId,
+          user._id,
+          { type: base.type, title: base.title, options: base.options, constraints: base.constraints },
+          { note: '演示：从第一阶段版本派生' }
+        );
+        console.log('已为演示题目创建 v2。');
+      }
+    }
+
+    let mate = await users.findOne({ usernameLower: 'teammate' });
+    if (!mate) {
+      const { salt, hash } = hashPassword('teammate123');
+      const result = await users.insertOne({
+        username: 'teammate',
+        usernameLower: 'teammate',
+        passwordHash: hash,
+        passwordSalt: salt,
+        createdAt: new Date(),
+      });
+      mate = { _id: result.insertedId };
+      console.log('已创建共享演示账号：teammate / teammate123');
+    }
+    await db.collection('questions').updateOne(
+      { _id: mainSurvey.questions[0].questionId },
+      { $addToSet: { sharedWith: mate._id } }
+    );
   }
 
   await close();

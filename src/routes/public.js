@@ -72,11 +72,21 @@ module.exports = function publicRoutes(db) {
         return res.status(400).json({ error: '提交的答案不合法', details: result.errors });
       }
 
+      const questionMap = new Map((survey.questions || []).map((q) => [q.qid, q]));
+      const answers = result.answers.map((answer) => {
+        const source = questionMap.get(answer.qid);
+        return {
+          ...answer,
+          questionId: source ? source.questionId : null,
+          version: source ? source.version : null,
+        };
+      });
+
       const doc = {
         surveyId: survey._id,
         respondentId: survey.anonymous ? null : req.user._id,
         anonymous: survey.anonymous,
-        answers: result.answers,
+        answers,
         path: result.path,
         submittedAt: new Date(),
       };

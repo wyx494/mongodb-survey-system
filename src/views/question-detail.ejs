@@ -1,0 +1,150 @@
+<%- include('partials/head') %>
+<div class="page-head">
+  <div>
+    <h1><%= current.title %></h1>
+    <p class="muted">
+      <%= current.type === 'single' ? '单选' : current.type === 'multiple' ? '多选' : current.type === 'text' ? '填空' : '数字' %>
+      · 当前 v<%= question.currentVersion %>
+      · 被 <%= usage.length %> 份问卷引用
+      · <%= isOwner ? '我创建的' : '共享给我的' %>
+    </p>
+  </div>
+  <div>
+    <a class="btn" href="/questions">返回题库</a>
+    <a class="btn" href="/questions/<%= question._id %>/stats">跨问卷统计</a>
+  </div>
+</div>
+
+<% if (notice) { %>
+  <div class="notice"><%= notice %></div>
+<% } %>
+
+<div class="card">
+  <h2>当前内容（v<%= current.version %>）</h2>
+  <p class="question-text"><%= current.title %></p>
+  <% if (current.type === 'single' || current.type === 'multiple') { %>
+    <table class="table">
+      <thead><tr><th>key</th><th>选项</th></tr></thead>
+      <tbody>
+        <% for (const option of current.options) { %>
+          <tr><td><%= option.key %></td><td><%= option.label %></td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  <% } %>
+  <p class="muted small">
+    约束：
+    <% if (current.type === 'multiple') { %>
+      最少 <%= current.constraints.minSelect ?? '—' %>，最多 <%= current.constraints.maxSelect ?? '—' %>，必须选 <%= current.constraints.exactSelect ?? '—' %>
+    <% } else if (current.type === 'text') { %>
+      最少 <%= current.constraints.minLength ?? '—' %> 字，最多 <%= current.constraints.maxLength ?? '—' %> 字
+    <% } else if (current.type === 'number') { %>
+      范围 <%= current.constraints.min ?? '—' %> ~ <%= current.constraints.max ?? '—' %>，<%= current.constraints.integer ? '必须是整数' : '可以是小数' %>
+    <% } else { %>
+      无
+    <% } %>
+  </p>
+</div>
+
+<div class="card">
+  <h2>版本历史</h2>
+  <table class="table">
+    <thead><tr><th>版本</th><th>标题</th><th>说明</th><th>时间</th><th></th></tr></thead>
+    <tbody>
+      <% for (const version of versions) { %>
+        <tr>
+          <td>v<%= version.version %></td>
+          <td><%= version.title %></td>
+          <td class="muted small"><%= version.note || '' %><%= version.restoredFrom ? `（来自 v${version.restoredFrom}）` : '' %></td>
+          <td class="muted small"><%= new Date(version.createdAt).toLocaleString('zh-CN') %></td>
+          <td>
+            <% if (version.version !== question.currentVersion) { %>
+              <% if (isOwner) { %>
+                <form method="post" action="/questions/<%= question._id %>/restore" onsubmit="return confirm('把这个版本的内容复制成新版本？')">
+                  <input type="hidden" name="version" value="<%= version.version %>">
+                  <button type="submit" class="btn small">恢复</button>
+                </form>
+              <% } %>
+            <% } else { %>
+              <span class="badge">当前</span>
+            <% } %>
+          </td>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+</div>
+
+<% if (isOwner) { %>
+  <div class="card">
+    <h2>创建新版本</h2>
+    <p class="muted small">已发布问卷引用的是旧版本，不会被这次修改影响。</p>
+    <form method="post" action="/questions/<%= question._id %>/versions">
+      <div class="row">
+        <label class="field">题型
+          <select name="type" id="version-type">
+            <option value="single" <%= current.type === 'single' ? 'selected' : '' %>>单选题</option>
+            <option value="multiple" <%= current.type === 'multiple' ? 'selected' : '' %>>多选题</option>
+            <option value="text" <%= current.type === 'text' ? 'selected' : '' %>>填空题</option>
+            <option value="number" <%= current.type === 'number' ? 'selected' : '' %>>数字题</option>
+          </select>
+        </label>
+        <label class="field" style="flex:1">题目
+          <input name="title" value="<%= current.title %>" required>
+        </label>
+      </div>
+      <label class="field">选项（每行一个，格式 <code>key|文字</code>，选择题必填）
+        <textarea name="options" rows="4"><%= (current.options || []).map(o => o.key + '|' + o.label).join('\n') %></textarea>
+      </label>
+      <div class="row">
+        <label class="field">最少选<input type="number" name="minSelect" value="<%= current.constraints.minSelect ?? '' %>"></label>
+        <label class="field">最多选<input type="number" name="maxSelect" value="<%= current.constraints.maxSelect ?? '' %>"></label>
+        <label class="field">必须选<input type="number" name="exactSelect" value="<%= current.constraints.exactSelect ?? '' %>"></label>
+        <label class="field">最少字数<input type="number" name="minLength" value="<%= current.constraints.minLength ?? '' %>"></label>
+        <label class="field">最多字数<input type="number" name="maxLength" value="<%= current.constraints.maxLength ?? '' %>"></label>
+        <label class="field">最小值<input type="number" name="min" value="<%= current.constraints.min ?? '' %>"></label>
+        <label class="field">最大值<input type="number" name="max" value="<%= current.constraints.max ?? '' %>"></label>
+      </div>
+      <label class="check"><input type="checkbox" name="integer" <%= current.constraints.integer ? 'checked' : '' %>> 数字必须是整数</label>
+      <label class="field">版本说明
+        <input name="note" placeholder="例如：把年龄范围改成 0-120">
+      </label>
+      <button type="submit" class="btn primary">保存为新版本</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>共享给其他用户</h2>
+    <p class="muted small">被共享的人可以在自己的问卷里引用这道题，但不能修改。</p>
+    <form method="post" action="/questions/<%= question._id %>/share" class="inline-form">
+      <input name="username" placeholder="对方用户名" required>
+      <button type="submit" class="btn">共享</button>
+    </form>
+    <% if (sharedUsers.length > 0) { %>
+      <p class="muted small">已共享给：
+        <%= sharedUsers.map(u => u.username).join('、') %>
+      </p>
+    <% } %>
+  </div>
+<% } %>
+
+<div class="card">
+  <h2>被哪些问卷使用</h2>
+  <% if (usage.length === 0) { %>
+    <p class="muted">还没有问卷引用这道题。</p>
+  <% } else { %>
+    <table class="table">
+      <thead><tr><th>问卷</th><th>状态</th><th>更新时间</th></tr></thead>
+      <tbody>
+        <% for (const survey of usage) { %>
+          <tr>
+            <td><%= survey.title %></td>
+            <td><%= survey.status === 'draft' ? '草稿' : survey.status === 'published' ? '已发布' : '已关闭' %></td>
+            <td class="muted small"><%= new Date(survey.updatedAt).toLocaleString('zh-CN') %></td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+<%- include('partials/footer') %>

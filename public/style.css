@@ -244,3 +244,14 @@ h2 { font-size: 18px; margin: 0 0 8px; }
 .answer-list li { padding: 4px 0; border-bottom: 1px dashed var(--border); }
 
 .foot { text-align: center; color: var(--muted); font-size: 12px; padding: 20px; }
+
+.actions { display: flex; gap: 6px; }
+.inline-form { display: flex; gap: 8px; max-width: 380px; }
+.inline-form input { flex: 1; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font: inherit; }
+.question-text { font-size: 16px; margin: 4px 0 10px; }
+
+.modal { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.45); display: flex; align-items: center; justify-content: center; z-index: 50; }
+.modal.hidden { display: none; }
+.modal-box { background: #fff; border-radius: 12px; width: min(640px, 92vw); max-height: 80vh; overflow: auto; padding: 20px; }
+.modal-head { display: flex; align-items: center; justify-content: space-between; }
+.bank-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border); }

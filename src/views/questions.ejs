@@ -1,0 +1,39 @@
+<%- include('partials/head') %>
+<div class="page-head">
+  <div>
+    <h1>题库</h1>
+    <p class="muted">问卷里创建的题目会自动进入题库；这里可以查看版本、共享和引用情况。</p>
+  </div>
+  <a class="btn" href="/dashboard">返回问卷</a>
+</div>
+
+<% if (questions.length === 0) { %>
+  <div class="card empty">
+    <p>题库还是空的。</p>
+    <p class="muted">在问卷编辑页添加题目后，题目会自动保存到这里。</p>
+  </div>
+<% } else { %>
+  <div class="card">
+    <table class="table">
+      <thead>
+        <tr><th>题目</th><th>题型</th><th>版本</th><th>被引用</th><th>来源</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% for (const q of questions) { %>
+          <tr>
+            <td><a href="/questions/<%= q._id %>"><%= q.title %></a></td>
+            <td><%= q.type === 'single' ? '单选' : q.type === 'multiple' ? '多选' : q.type === 'text' ? '填空' : '数字' %></td>
+            <td>v<%= q.currentVersion %></td>
+            <td><%= q.usageCount %> 份问卷</td>
+            <td><%= q.isOwner ? '我的' : '共享给我' %></td>
+            <td class="actions">
+              <a class="btn small" href="/questions/<%= q._id %>">详情</a>
+              <a class="btn small" href="/questions/<%= q._id %>/stats">统计</a>
+            </td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+<% } %>
+<%- include('partials/footer') %>

@@ -2,7 +2,7 @@
 
 const express = require('express');
 const { requireAuth, toObjectId } = require('../auth');
-const { generateSlug, normalizeQuestions, validateForPublish } = require('../services/survey');
+const { generateSlug, prepareQuestions, validateForPublish } = require('../services/survey');
 
 module.exports = function surveyRoutes(db) {
   const router = express.Router();
@@ -55,7 +55,7 @@ module.exports = function surveyRoutes(db) {
             status: 'draft',
             deadline: parseDeadline(req.body.deadline) ?? null,
             questions: [],
-            schemaVersion: 1,
+            schemaVersion: 2,
             createdAt: now,
             updatedAt: now,
           };
@@ -113,7 +113,7 @@ module.exports = function surveyRoutes(db) {
         if (survey.status !== 'draft') {
           return res.status(409).json({ error: '问卷发布后不能再修改题目，请先关闭后重新创建' });
         }
-        update.questions = normalizeQuestions(req.body.questions);
+        update.questions = await prepareQuestions(db, req.user._id, req.body.questions);
       }
 
       await surveys.updateOne({ _id: survey._id }, { $set: update });

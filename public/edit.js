@@ -31,10 +31,13 @@
       .replace(/"/g, '&quot;');
   }
 
+  function newQid() {
+    return `q${Date.now().toString(36)}${Math.floor(Math.random() * 90 + 10)}`;
+  }
+
   function newQuestion() {
-    const qid = `q${Date.now().toString(36)}${Math.floor(Math.random() * 90 + 10)}`;
     return {
-      qid,
+      qid: newQid(),
       type: 'single',
       title: '',
       required: false,
@@ -176,17 +179,36 @@
       .map(([value, label]) => `<option value="${value}" ${q.type === value ? 'selected' : ''}>${label}</option>`)
       .join('');
 
+    const fromBank = Boolean(q.questionId);
+    const typeLabel = q.type === 'single' ? '单选' : q.type === 'multiple' ? '多选' : q.type === 'text' ? '填空' : '数字';
+    const content = fromBank
+      ? `
+        <p class="question-text">${escapeHtml(q.title)}</p>
+        ${q.type === 'single' || q.type === 'multiple'
+          ? `<p class="muted small">${q.options.map((o) => `${escapeHtml(o.key)}. ${escapeHtml(o.label)}`).join('；')}</p>`
+          : ''}
+        <p class="muted small">
+          <span class="badge">题库 v${q.version}</span>
+          内容固定为所选版本；要改内容请到
+          <a href="/questions/${q.questionId}" target="_blank">题目详情</a>
+          创建新版本。
+        </p>`
+      : `
+        <input class="q-title" data-field="title" data-qi="${qi}" value="${escapeHtml(q.title)}" placeholder="题目内容" ${locked ? 'disabled' : ''}>
+        ${q.type === 'single' || q.type === 'multiple' ? optionsHtml(q, qi) : ''}
+        ${constraintsHtml(q, qi)}`;
+
     return `
       <div class="card question" data-qi="${qi}">
         <div class="q-head">
           <span class="q-no">第 ${qi + 1} 题</span>
-          <select data-role="type" data-qi="${qi}" ${locked ? 'disabled' : ''}>${types}</select>
+          ${fromBank
+            ? `<span class="badge">${typeLabel} · 题库</span>`
+            : `<select data-role="type" data-qi="${qi}" ${locked ? 'disabled' : ''}>${types}</select>`}
           ${locked ? '' : `<button type="button" class="btn small danger" data-action="remove-question" data-qi="${qi}">删除</button>`}
         </div>
-        <input class="q-title" data-field="title" data-qi="${qi}" value="${escapeHtml(q.title)}" placeholder="题目内容" ${locked ? 'disabled' : ''}>
+        ${content}
         <label class="check"><input type="checkbox" data-field="required" data-qi="${qi}" ${q.required ? 'checked' : ''} ${locked ? 'disabled' : ''}> 必答题</label>
-        ${q.type === 'single' || q.type === 'multiple' ? optionsHtml(q, qi) : ''}
-        ${constraintsHtml(q, qi)}
         ${jumpsHtml(q, qi)}
       </div>`;
   }
@@ -197,6 +219,7 @@
       questionsEl.innerHTML = '<div class="card empty"><p class="muted">还没有题目，点下面“添加题目”开始。</p></div>';
     }
     document.getElementById('add-question').style.display = locked ? 'none' : '';
+    document.getElementById('add-from-bank').style.display = locked ? 'none' : '';
   }
 
   function applyTypeChange(qi, type) {
@@ -314,6 +337,62 @@
     render();
   });
 
+  // 从题库选题
+  const bankModal = document.getElementById('bank-modal');
+  const bankList = document.getElementById('bank-list');
+  let bankItems = [];
+
+  document.getElementById('add-from-bank').addEventListener('click', async () => {
+    bankModal.classList.remove('hidden');
+    bankList.innerHTML = '<p class="muted">加载中…</p>';
+    try {
+      const res = await fetch('/api/questions');
+      const data = await res.json();
+      bankItems = data.questions || [];
+      bankList.innerHTML = bankItems.length
+        ? bankItems
+            .map(
+              (q) => `
+            <div class="bank-item">
+              <div>
+                <strong>${escapeHtml(q.title)}</strong>
+                <div class="muted small">
+                  ${q.type === 'single' ? '单选' : q.type === 'multiple' ? '多选' : q.type === 'text' ? '填空' : '数字'}
+                  · v${q.currentVersion} · 被 ${q.usageCount} 份问卷使用
+                </div>
+              </div>
+              <button type="button" class="btn small primary" data-bank-id="${q._id}">添加</button>
+            </div>`
+            )
+            .join('')
+        : '<p class="muted">题库还是空的，先在问卷里添加一道新题。</p>';
+    } catch (err) {
+      bankList.innerHTML = '<p class="form-error">题库加载失败</p>';
+    }
+  });
+
+  document.getElementById('bank-close').addEventListener('click', () => bankModal.classList.add('hidden'));
+
+  bankList.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-bank-id]');
+    if (!button) return;
+    const item = bankItems.find((q) => String(q._id) === button.dataset.bankId);
+    if (!item || !item.current) return;
+    state.questions.push({
+      qid: newQid(),
+      questionId: item._id,
+      version: item.currentVersion,
+      type: item.current.type,
+      title: item.current.title,
+      options: item.current.options,
+      constraints: item.current.constraints,
+      required: false,
+      jumps: [],
+    });
+    bankModal.classList.add('hidden');
+    render();
+  });
+
   function serialize() {
     return state.questions.map((q) => {
       const constraints = {};
@@ -331,6 +410,7 @@
         options: q.options || [],
         constraints,
         jumps,
+        ...(q.questionId ? { questionId: q.questionId, version: q.version } : {}),
       };
     });
   }

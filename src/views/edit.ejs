@@ -34,6 +34,7 @@
 
 <div class="editor-actions">
   <button type="button" class="btn" id="add-question">+ 添加题目</button>
+  <button type="button" class="btn" id="add-from-bank">+ 从题库添加</button>
   <span class="spacer"></span>
   <span class="muted" id="save-message"></span>
   <button type="button" class="btn" id="save">保存</button>
@@ -45,5 +46,15 @@
 <script>
   window.__SURVEY__ = <%- JSON.stringify(survey).replace(/</g, '\\u003c') %>;
 </script>
+<div id="bank-modal" class="modal hidden">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>从题库选择</h2>
+      <button type="button" class="btn small" id="bank-close">关闭</button>
+    </div>
+    <p class="muted small">共享给你的题目也会出现在这里；添加后内容固定为所选版本。</p>
+    <div id="bank-list"></div>
+  </div>
+</div>
 <script src="/edit.js"></script>
 <%- include('partials/footer') %>

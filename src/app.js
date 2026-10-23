@@ -9,6 +9,8 @@ const surveyRoutes = require('./routes/surveys');
 const statsRoutes = require('./routes/stats');
 const publicRoutes = require('./routes/public');
 const pageRoutes = require('./routes/pages');
+const questionRoutes = require('./routes/questions');
+const questionPages = require('./routes/question-pages');
 
 /**
  * 组装 Express 应用。把 db 作为参数传进来，测试时可以换一个测试库。
@@ -25,11 +27,19 @@ function createApp(db) {
   app.use(express.static(config.publicDir));
   app.use(attachUser(db));
 
+  // 接口响应不缓存，避免改完题目后列表/详情读到旧数据
+  app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+  });
+
   // 统计路由要放在问卷路由前面，否则 /:id 会先匹配掉 /:id/stats
   app.use('/api/auth', authRoutes(db));
   app.use('/api/surveys', statsRoutes(db));
   app.use('/api/surveys', surveyRoutes(db));
   app.use('/api/public', publicRoutes(db));
+  app.use('/api/questions', questionRoutes(db));
+  app.use('/', questionPages(db));
   app.use('/', pageRoutes(db));
 
   app.use((req, res) => {

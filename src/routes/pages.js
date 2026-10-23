@@ -67,7 +67,7 @@ module.exports = function pageRoutes(db) {
             status: 'draft',
             deadline: null,
             questions: [],
-            schemaVersion: 1,
+            schemaVersion: 2,
             createdAt: now,
             updatedAt: now,
           };

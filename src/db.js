@@ -96,6 +96,41 @@ const VALIDATORS = {
       },
     },
   },
+  questions: {
+    $jsonSchema: {
+      bsonType: 'object',
+      required: ['ownerId', 'title', 'type', 'currentVersion', 'createdAt', 'updatedAt'],
+      properties: {
+        ownerId: { bsonType: 'objectId' },
+        title: { bsonType: 'string', maxLength: 200 },
+        type: { enum: ['single', 'multiple', 'text', 'number'] },
+        currentVersion: { bsonType: 'int' },
+        inBank: { bsonType: 'bool' },
+        sharedWith: { bsonType: 'array' },
+        derivedFrom: { bsonType: ['object', 'null'] },
+        createdAt: { bsonType: 'date' },
+        updatedAt: { bsonType: 'date' },
+      },
+    },
+  },
+  question_versions: {
+    $jsonSchema: {
+      bsonType: 'object',
+      required: ['questionId', 'version', 'type', 'title', 'createdAt'],
+      properties: {
+        questionId: { bsonType: 'objectId' },
+        version: { bsonType: 'int' },
+        type: { enum: ['single', 'multiple', 'text', 'number'] },
+        title: { bsonType: 'string', maxLength: 200 },
+        options: { bsonType: 'array' },
+        constraints: { bsonType: 'object' },
+        createdBy: { bsonType: 'objectId' },
+        createdAt: { bsonType: 'date' },
+        note: { bsonType: 'string' },
+        restoredFrom: { bsonType: ['int', 'null'] },
+      },
+    },
+  },
 };
 
 async function ensureCollection(name, validator) {
@@ -130,6 +165,15 @@ async function ensureSchema() {
   // 会话：到期自动清理（TTL 索引）；按用户查
   await db.collection('sessions').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
   await db.collection('sessions').createIndex({ userId: 1 });
+
+  // 题库：按所有者/共享人查；版本链唯一
+  await db.collection('questions').createIndex({ ownerId: 1, updatedAt: -1 });
+  await db.collection('questions').createIndex({ sharedWith: 1 });
+  await db.collection('question_versions').createIndex({ questionId: 1, version: -1 }, { unique: true });
+
+  // 题目被哪些问卷使用；题目跨问卷统计
+  await db.collection('surveys').createIndex({ 'questions.questionId': 1 });
+  await db.collection('responses').createIndex({ 'answers.questionId': 1 });
 }
 
 module.exports = { connect, getDb, close, ensureSchema };

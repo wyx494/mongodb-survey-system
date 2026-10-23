@@ -43,7 +43,7 @@ function check(name, result, includes) {
     console.log('FAIL 没有演示问卷');
     process.exit(1);
   }
-  const survey = surveys[0];
+  const survey = surveys.find((s) => s.status === 'published') || surveys[0];
 
   allOk &= check('编辑页', await req(`/surveys/${survey._id}/edit`), '编辑问卷');
   allOk &= check('统计页', await req(`/surveys/${survey._id}/stats`), '统计');

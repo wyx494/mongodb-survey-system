@@ -1,0 +1,65 @@
+<%- include('partials/head') %>
+<div class="page-head">
+  <div>
+    <h1><%= question.title %> · 跨问卷统计</h1>
+    <p class="muted">按题目汇总所有引用它的问卷；不同版本分开显示，避免选项不一致时硬合并。</p>
+  </div>
+  <div>
+    <a class="btn" href="/questions/<%= question._id %>">返回题目</a>
+    <a class="btn" href="/questions">题库</a>
+  </div>
+</div>
+
+<div class="card">
+  <p>总回答数：<strong><%= stats.total %></strong> · 版本数：<strong><%= stats.versions.length %></strong></p>
+</div>
+
+<% if (stats.total === 0) { %>
+  <div class="card empty">
+    <p>还没有人回答过这道题。</p>
+  </div>
+<% } %>
+
+<% for (const version of stats.versions) { %>
+  <div class="card stats-block">
+    <div class="stats-head">
+      <h2>v<%= version.version %>：<%= version.title %></h2>
+      <span class="badge"><%= version.type === 'single' ? '单选' : version.type === 'multiple' ? '多选' : version.type === 'text' ? '填空' : '数字' %></span>
+    </div>
+    <p class="muted small">回答数：<%= version.totalAnswered %></p>
+
+    <% if (version.type === 'single' || version.type === 'multiple') { %>
+      <% const maxCount = Math.max(1, ...version.options.map(o => o.count)); %>
+      <table class="table">
+        <thead><tr><th>选项</th><th>次数</th><th style="width:50%">占比</th></tr></thead>
+        <tbody>
+          <% for (const option of version.options) { %>
+            <tr>
+              <td><%= option.label %> <span class="muted small">(<%= option.key %>)</span></td>
+              <td><%= option.count %></td>
+              <td><div class="bar"><div class="bar-inner" style="width: <%= Math.round((option.count / maxCount) * 100) %>%"></div></div></td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    <% } else if (version.type === 'text') { %>
+      <% if (!version.values || version.values.length === 0) { %>
+        <p class="muted">暂无文本答案。</p>
+      <% } else { %>
+        <ul class="answer-list">
+          <% for (const value of version.values) { %><li><%= value %></li><% } %>
+        </ul>
+      <% } %>
+    <% } else { %>
+      <div class="number-stats">
+        <div><span class="num"><%= version.avg ?? '—' %></span><span class="muted small">平均值</span></div>
+        <div><span class="num"><%= version.min ?? '—' %></span><span class="muted small">最小值</span></div>
+        <div><span class="num"><%= version.max ?? '—' %></span><span class="muted small">最大值</span></div>
+      </div>
+      <% if (version.values && version.values.length > 0) { %>
+        <p class="muted small">全部数值：<%= version.values.join('、') %></p>
+      <% } %>
+    <% } %>
+  </div>
+<% } %>
+<%- include('partials/footer') %>

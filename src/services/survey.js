@@ -4,6 +4,7 @@
  * 问卷结构处理：短链生成、题目规范化、发布前校验。
  */
 const crypto = require('node:crypto');
+const questionsService = require('./questions');
 
 // 去掉了容易混淆的 0/o、1/l/I
 const SLUG_ALPHABET = '23456789abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -206,9 +207,66 @@ function validateForPublish(survey) {
   return errors;
 }
 
+/**
+ * 保存问卷题目：把前端提交的题目整理成“引用 + 快照”。
+ *
+ * - 带 questionId：从题库取指定版本的内容，忽略前端传的内容（防止篡改）；
+ * - 不带 questionId：先在题库里创建题目和 v1，再引用它。
+ * 必答、跳转属于“这次使用”，仍然由前端提交。
+ */
+async function prepareQuestions(db, ownerId, rawQuestions) {
+  assert(Array.isArray(rawQuestions), 'questions 必须是数组');
+  assert(rawQuestions.length <= 100, '题目数量不能超过 100');
+
+  const prepared = [];
+  const usedQids = new Set();
+
+  for (let index = 0; index < rawQuestions.length; index += 1) {
+    const raw = rawQuestions[index] || {};
+    const number = index + 1;
+    const qid = String(raw.qid || '').trim() || `q${number}`;
+
+    let content;
+    let questionId = null;
+    let version = null;
+
+    if (raw.questionId) {
+      const question = await questionsService.getQuestion(db, raw.questionId);
+      assert(question, `第 ${number} 题引用的题目不存在`);
+      assert(questionsService.canUse(question, ownerId), `第 ${number} 题引用的题目没有使用权限`);
+      const versionNumber =
+        raw.version != null && raw.version !== '' ? Number(raw.version) : question.currentVersion;
+      const versionDoc = await questionsService.getVersion(db, question._id, versionNumber);
+      assert(versionDoc, `第 ${number} 题引用的版本不存在`);
+      content = questionsService.contentOf(versionDoc);
+      questionId = question._id;
+      version = versionNumber;
+    } else {
+      content = questionsService.normalizeContent(raw);
+    }
+
+    const [normalized] = normalizeQuestions([
+      { ...content, qid, required: raw.required, jumps: raw.jumps },
+    ]);
+    assert(!usedQids.has(normalized.qid), `题号重复：${normalized.qid}`);
+    usedQids.add(normalized.qid);
+
+    if (!questionId) {
+      const created = await questionsService.createQuestion(db, ownerId, content);
+      questionId = created.question._id;
+      version = 1;
+    }
+
+    prepared.push({ ...normalized, questionId, version });
+  }
+
+  return prepared;
+}
+
 module.exports = {
   generateSlug,
   normalizeQuestions,
+  prepareQuestions,
   validateForPublish,
   TYPES,
   NUMBER_OPS,
