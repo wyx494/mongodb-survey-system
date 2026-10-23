@@ -15,3 +15,7 @@ scripts/ui-check.js
 项目报告-第二阶段.docx
 项目报告-第二阶段.pdf
 scripts/build-report-phase2.py
+
+AI使用日志.docx
+AI使用日志.pdf
+scripts/build-log-pdf.py
